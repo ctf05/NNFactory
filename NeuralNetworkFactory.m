@@ -2,7 +2,7 @@ function NeuralNetworkFactory
     imds = imageDatastore(fullfile('training', '*.jpg'), ...
         'ReadFcn', @(x) preprocessImage(x));
     
-    batchSize = 5000;
+    batchSize = 20000;
     numFiles = length(imds.Files);
     fprintf('Number of files: %d\n', numFiles);
     targets = zeros(numFiles, 8);
@@ -26,9 +26,7 @@ function NeuralNetworkFactory
             targets(i+j-1,:) = params;
         end
         
-        if mod(i, batchSize + 1) == 0
-            fprintf('Processed files %d to %d of %d\n', i, endIdx, numFiles);
-        end
+        fprintf('Processed files %d to %d of %d\n', i, endIdx, numFiles);
     end
     
     ds = arrayDatastore(targets, 'OutputType', 'same');
