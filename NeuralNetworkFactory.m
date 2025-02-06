@@ -32,9 +32,6 @@ function NeuralNetworkFactory
     ds = arrayDatastore(targets, 'OutputType', 'same');
     cds = combine(imds, ds);
     
-    cds.MiniBatchSize = batchSize;
-    cds.ReadSize = batchSize;
-    
     inputSize = [225 225 1];
     layers = [
         imageInputLayer(inputSize)
