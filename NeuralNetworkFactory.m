@@ -31,6 +31,9 @@ function NeuralNetworkFactory
     
     trainIdx = 1:trainSize;
     valIdx = (trainSize + 1):numFiles;
+
+    trainFiles = imds.Files(trainIdx);
+    trainTargets = targets(trainIdx, :);
     
     trainImds = imageDatastore(trainFiles, 'ReadFcn', @(x) preprocessImage(x));
     trainDs = arrayDatastore(trainTargets);
