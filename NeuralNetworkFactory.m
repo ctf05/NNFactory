@@ -53,8 +53,13 @@ function NeuralNetworkFactory
         reluLayer
         maxPooling2dLayer(2, 'Stride',2)
         convolution2dLayer(3, 64, 'Padding','same')
+        batchNormalizationLayer
         reluLayer
-        fullyConnectedLayer(256)
+        maxPooling2dLayer(2, 'Stride',2)
+        convolution2dLayer(3, 128, 'Padding','same')
+        batchNormalizationLayer
+        reluLayer
+        fullyConnectedLayer(512)
         reluLayer
         dropoutLayer(0.5)
         fullyConnectedLayer(8)
