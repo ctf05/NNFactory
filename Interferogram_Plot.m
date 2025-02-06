@@ -11,8 +11,8 @@ function greyPlot = Interferogram_Plot(D, C, B, G, F, J, E, I, pixels, ~)
     FWF = ones(respix,respix);
     WFE = zeros(respix,respix);
     
-    for i = 1:size(FWF,1)+1
-        for j = 1:size(FWF,2)+1
+    for i = 1:respix
+        for j = 1:respix
             x = (i-(respix/2 + 1))/(respix/2);
             y = (j-(respix/2 + 1))/(respix/2);
     

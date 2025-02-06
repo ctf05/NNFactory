@@ -1,29 +1,31 @@
 function NeuralNetworkFactory
-    imgs = dir(fullfile('training', '*.jpg'));
-    numFiles = numel(imgs);
+    imds = imageDatastore(fullfile('training', '*.jpg'), ...
+        'ReadFcn', @(x) preprocessImage(x));
     
-    randIdx = randperm(numFiles);
-    imgs = imgs(randIdx);
-    
-    inputSize = [224 224 1];
-    images = zeros([inputSize, numFiles], 'single');
+    numFiles = length(imds.Files);
+    fprintf('Number of files: %d\n', numFiles);
     targets = zeros(numFiles, 8);
-    
     for i = 1:numFiles
-        img = imread(fullfile('training', imgs(i).name));
-        images(:,:,:,i) = single(img)/255;
-        
-        [~, name, ~] = fileparts(imgs(i).name);
-        params = sscanf(name, 'img_D%f_C%f_B%f_G%f_F%f_J%f_E%f_I%f');
-        targets(i,:) = params';
+        [~, name, ~] = fileparts(imds.Files{i});
+        name = strrep(name, 'n', '-');
+        name = strrep(name, 'p', '.');
+        parts = split(name, '_');
+        params = zeros(1, 8);
+        for j = 2:length(parts)
+            param_str = parts{j};
+            param_val = str2double(param_str(2:end));
+            params(j-1) = param_val;
+        end
+        targets(i,:) = params;
     end
     
-    cv = cvpartition(size(images,4), 'HoldOut', 0.2);
-    trainImgs = images(:,:,:, cv.training);
-    trainTargets = targets(cv.training,:);
-    valImgs = images(:,:,:, cv.test);
-    valTargets = targets(cv.test,:);
+    ds = arrayDatastore(targets, 'OutputType', 'same');
+    cds = combine(imds, ds);
     
+    cds.MiniBatchSize = 16;
+    cds.ReadSize = 16;
+    
+    inputSize = [225 225 1];
     layers = [
         imageInputLayer(inputSize)
         convolution2dLayer(3, 32, 'Padding','same')
@@ -39,32 +41,63 @@ function NeuralNetworkFactory
         regressionLayer
     ];
     
-    validationFunction = @(net) customValidation(net, valImgs, valTargets);
+    validationFunction = @(net) dynamicValidation(net, cds);
     
     options = trainingOptions('adam', ...
-        'MaxEpochs',5, ...
-        'InitialLearnRate',1e-3, ...
+        'MaxEpochs', 5, ...
+        'InitialLearnRate', 1e-3, ...
         'ValidationFunction', validationFunction, ...
-        'Plots','training-progress', ...
-        'Verbose',true, ...
-        'ExecutionEnvironment','gpu', ...
-        'MiniBatchSize', 16);
+        'Plots', 'training-progress', ...
+        'Verbose', true, ...
+        'ExecutionEnvironment', 'gpu', ...
+        'MiniBatchSize', 16, ...
+        'Shuffle', 'every-epoch', ...
+        'DispatchInBackground', true);
     
-    net = trainNetwork(trainImgs, trainTargets, layers, options);
-end
-
-function [validationError, allPredictions] = customValidation(net, XVal, YVal)
-    miniBatchSize = 16;
-    numObservations = size(XVal, 4);
-    numBatches = ceil(numObservations / miniBatchSize);
-    allPredictions = [];
+    net = trainNetwork(cds, layers, options);
     
-    for i = 1:numBatches
-        startIdx = (i-1)*miniBatchSize + 1;
-        endIdx = min(i*miniBatchSize, numObservations);
-        predictions = predict(net, XVal(:,:,:,startIdx:endIdx));
-        allPredictions = [allPredictions; predictions];
+    saveDir = fullfile('models');
+    if ~exist(saveDir, 'dir')
+        mkdir(saveDir);
     end
     
-    validationError = mean((allPredictions - YVal).^2, 'all');
+    modelFileName = fullfile(saveDir, 'trained_network.mat');
+    saveLearnerForCoder(net, modelFileName);
+    fprintf('Model saved as: %s\n', modelFileName);
+end
+
+function img = preprocessImage(filename)
+    img = imread(filename);
+    img = single(img)/255;
+    img = reshape(img, [size(img,1), size(img,2), 1]);
+end
+
+function [validationError, allPredictions] = dynamicValidation(net, cds)
+    numFiles = length(cds.UnderlyingDatastores{1}.Files);
+    validationSize = floor(0.2 * numFiles);
+    
+    validationIndices = randperm(numFiles, validationSize);
+    
+    valFiles = cds.UnderlyingDatastores{1}.Files(validationIndices);
+    valTargets = cds.UnderlyingDatastores{2}.Data(validationIndices,:);
+    
+    valImds = imageDatastore(valFiles, ...
+        'ReadFcn', @(x) preprocessImage(x));
+    valDs = arrayDatastore(valTargets, 'OutputType', 'same');
+    valCds = combine(valImds, valDs);
+    valCds.MiniBatchSize = 16;
+    
+    predictions = [];
+    actual = [];
+    
+    reset(valCds);
+    while hasdata(valCds)
+        [batch, info] = read(valCds);
+        batchPreds = predict(net, batch{1});
+        predictions = [predictions; batchPreds];
+        actual = [actual; batch{2}];
+    end
+    
+    validationError = mean((predictions - actual).^2, 'all');
+    allPredictions = predictions;
 end
