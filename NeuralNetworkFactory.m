@@ -72,7 +72,8 @@ function NeuralNetworkFactory
         'ExecutionEnvironment', 'gpu', ...
         'MiniBatchSize', 14, ...
         'Shuffle', 'every-epoch', ...
-        'DispatchInBackground', true);
+        'DispatchInBackground', true), ...
+        'OutputFcn', @(info)outputFcn(info, valCds));
     
     net = trainNetwork(trainCds, layers, options);
     
@@ -93,4 +94,12 @@ end
 
 function out = preprocessTrainingData(data)
     out = {data{1}, data{2}};  
+end
+
+function stop = outputFcn(info, validationData)
+    stop = false;
+    
+    if ~isempty(info.Network) && mod(info.Iteration, 100) == 0
+        plotPredictions(info.Network, validationData);
+    end
 end
