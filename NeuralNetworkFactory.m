@@ -2,28 +2,40 @@ function NeuralNetworkFactory
     imds = imageDatastore(fullfile('training', '*.jpg'), ...
         'ReadFcn', @(x) preprocessImage(x));
     
+    batchSize = 20000;
     numFiles = length(imds.Files);
     fprintf('Number of files: %d\n', numFiles);
     targets = zeros(numFiles, 8);
-    for i = 1:numFiles
-        [~, name, ~] = fileparts(imds.Files{i});
-        name = strrep(name, 'n', '-');
-        name = strrep(name, 'p', '.');
-        parts = split(name, '_');
-        params = zeros(1, 8);
-        for j = 2:length(parts)
-            param_str = parts{j};
-            param_val = str2double(param_str(2:end));
-            params(j-1) = param_val;
+    for i = 1:batchSize:numFiles
+        endIdx = min(i + batchSize - 1, numFiles);
+        batch_files = imds.Files(i:endIdx);
+        
+        [~, names, ~] = cellfun(@fileparts, batch_files, 'UniformOutput', false);
+        
+        for j = 1:length(names)
+            name = names{j};
+            name = strrep(name, 'n', '-');
+            name = strrep(name, 'p', '.');
+            parts = split(name, '_');
+            params = zeros(1, 8);
+            for k = 2:length(parts)
+                param_str = parts{k};
+                param_val = str2double(param_str(2:end));
+                params(k-1) = param_val;
+            end
+            targets(i+j-1,:) = params;
         end
-        targets(i,:) = params;
+        
+        if mod(i, batchSize + 1) == 0
+            fprintf('Processed files %d to %d of %d\n', i, endIdx, numFiles);
+        end
     end
     
     ds = arrayDatastore(targets, 'OutputType', 'same');
     cds = combine(imds, ds);
     
-    cds.MiniBatchSize = 16;
-    cds.ReadSize = 16;
+    cds.MiniBatchSize = batchSize;
+    cds.ReadSize = batchSize;
     
     inputSize = [225 225 1];
     layers = [
