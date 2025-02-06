@@ -44,7 +44,7 @@ function NeuralNetworkFactory
     valDs = arrayDatastore(valTargets, 'OutputType', 'same');
     valCds = combine(valImds, valDs);
     
-    inputSize = [225 225 1];
+    inputSize = [224 224 1];
     layers = [
         imageInputLayer(inputSize)
         convolution2dLayer(3, 32, 'Padding','same')
