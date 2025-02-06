@@ -31,19 +31,18 @@ function NeuralNetworkFactory
     
     trainIdx = 1:trainSize;
     valIdx = (trainSize + 1):numFiles;
-
+    
     trainFiles = imds.Files(trainIdx);
     trainTargets = targets(trainIdx, :);
-    
     trainImds = imageDatastore(trainFiles, 'ReadFcn', @(x) preprocessImage(x));
-    trainDs = arrayDatastore(trainTargets);
-    trainCds = transform(combine(trainImds, trainDs), @preprocessTrainingData);
+    trainDs = arrayDatastore(trainTargets, 'OutputType', 'same');
+    trainCds = combine(trainImds, trainDs);
     
     valFiles = imds.Files(valIdx);
     valTargets = targets(valIdx, :);
     valImds = imageDatastore(valFiles, 'ReadFcn', @(x) preprocessImage(x));
-    valDs = arrayDatastore(valTargets);
-    valCds = transform(combine(valImds, valDs), @preprocessTrainingData);
+    valDs = arrayDatastore(valTargets, 'OutputType', 'same');
+    valCds = combine(valImds, valDs);
     
     inputSize = [224 224 1];
     layers = [
@@ -89,9 +88,4 @@ function img = preprocessImage(filename)
     img = imread(filename);
     img = single(img)/255;
     img = reshape(img, [size(img,1), size(img,2), 1]);
-end
-
-function [X,Y] = preprocessTrainingData(data)
-    X = data{1};
-    Y = data{2};
 end
