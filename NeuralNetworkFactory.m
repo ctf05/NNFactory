@@ -82,7 +82,7 @@ function NeuralNetworkFactory
         mkdir(saveDir);
     end
     modelFileName = fullfile(saveDir, 'trained_network.mat');
-    saveLearnerForCoder(net, modelFileName);
+    save(modelFileName, 'net');
     fprintf('Model saved as: %s\n', modelFileName);
 
     fprintf('\n=== Testing Some Predictions ===\n');
