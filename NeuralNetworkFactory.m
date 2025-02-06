@@ -84,6 +84,26 @@ function NeuralNetworkFactory
     modelFileName = fullfile(saveDir, 'trained_network.mat');
     saveLearnerForCoder(net, modelFileName);
     fprintf('Model saved as: %s\n', modelFileName);
+
+    fprintf('\n=== Testing Some Predictions ===\n');
+
+    testBatch = preview(valCds);
+    testImages = testBatch{1};
+    actualParams = testBatch{2};
+    
+    predictions = predict(net, testImages);
+    
+    for i = 1:min(5, size(predictions,1))
+        fprintf('\nSample %d:\n', i);
+        fprintf('Predicted: D=%.4f, C=%.4f, B=%.4f, G=%.4f, F=%.4f, J=%.4f, E=%.4f, I=%.4f\n', ...
+            predictions(i,:));
+        fprintf('Actual:    D=%.4f, C=%.4f, B=%.4f, G=%.4f, F=%.4f, J=%.4f, E=%.4f, I=%.4f\n', ...
+            actualParams(i,:));
+        
+        errors = abs(predictions(i,:) - actualParams(i,:));
+        fprintf('Abs Error: D=%.4f, C=%.4f, B=%.4f, G=%.4f, F=%.4f, J=%.4f, E=%.4f, I=%.4f\n', ...
+            errors);
+    end
 end
 
 function img = preprocessImage(filename)
@@ -99,7 +119,17 @@ end
 function stop = outputFcn(info, validationData)
     stop = false;
     
-    if ~isempty(info.Network) && mod(info.Iteration, 100) == 0
-        plotPredictions(info.Network, validationData);
+    if mod(info.Iteration, 100) == 0
+        fprintf('\n=== Training Progress at Iteration %d ===\n', info.Iteration);
+        fprintf('Epoch: %d\n', info.Epoch);
+        fprintf('Training Loss: %.6f\n', info.TrainingLoss);
+        fprintf('Training RMSE: %.6f\n', info.TrainingRMSE);
+        if ~isempty(info.ValidationLoss)
+            fprintf('Validation Loss: %.6f\n', info.ValidationLoss);
+            fprintf('Validation RMSE: %.6f\n', info.ValidationRMSE);
+        end
+        fprintf('Time Since Start: %.2f minutes\n', info.TimeSinceStart/60);
+        fprintf('Current Learning Rate: %.6f\n', info.BaseLearnRate);
+        fprintf('===================================\n\n');
     end
 end
