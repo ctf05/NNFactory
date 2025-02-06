@@ -2,7 +2,7 @@ function NeuralNetworkFactory
     imds = imageDatastore(fullfile('training', '*.jpg'), ...
         'ReadFcn', @(x) preprocessImage(x));
     
-    batchSize = 20000;
+    batchSize = 5000;
     numFiles = length(imds.Files);
     fprintf('Number of files: %d\n', numFiles);
     targets = zeros(numFiles, 8);
